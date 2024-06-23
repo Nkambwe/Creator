@@ -1,11 +1,7 @@
 package com.pbu.agents.services;
 
-import com.pbu.agents.models.IndividualAgent;
-import com.pbu.agents.models.Kin;
 import com.pbu.agents.models.Telecom;
-import com.pbu.agents.repositories.KinRepository;
 import com.pbu.agents.repositories.TelecomRepository;
-import com.pbu.agents.requests.KinRequest;
 import com.pbu.agents.requests.TelecomRequest;
 import com.pbu.utils.common.AppLoggerService;
 import com.pbu.utils.exceptions.GeneralException;
@@ -15,7 +11,6 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 @Service
@@ -43,6 +38,7 @@ public class TelecomServiceImp implements TelecomService {
             throw new GeneralException(String.format("%s", ex.getMessage()));
         }
     }
+
     @Override
     public CompletableFuture<Boolean> existsByName(String name) {
         logger.info("Check if telecom exists");
@@ -56,6 +52,7 @@ public class TelecomServiceImp implements TelecomService {
             throw new GeneralException(String.format("%s", ex.getMessage()));
         }
     }
+
     @Override
     public CompletableFuture<Boolean> existsByNameAndNotId(String name, Long id) {
         logger.info(String.format("Retrieving telecom with name %s and agent Id %s", name, id));

@@ -826,7 +826,7 @@ public class AgentController {
     //endregion
 
     //region Next Of Kins
-    @GetMapping("/ getKinWithName/{name}/{agentId}/{userId}")
+    @GetMapping("/getKinWithName/{name}/{agentId}/{userId}")
     public ResponseEntity<?> getKinWithName(@PathVariable("name") String name,
                                                  @PathVariable("agentId") long agentId,
                                                  @PathVariable("userId") long userId,
@@ -2243,7 +2243,7 @@ public class AgentController {
 
         return new ResponseEntity<>(record, HttpStatus.OK);
     }
-    @GetMapping("/ getBankBySortCode/{sortCode}")
+    @GetMapping("/getBankBySortCode/{sortCode}")
     public ResponseEntity<?> getBankBySortCode(@PathVariable("sortCode") String sortCode, HttpServletRequest request){
 
         BankRequest record;
@@ -2480,8 +2480,8 @@ public class AgentController {
 
     //endregion
 
-    //region Telecoms
-    @GetMapping("getTelecomById/{id}/{userId}")
+    //region telecoms
+    @GetMapping("/getTelecomById/{id}/{userId}")
     public ResponseEntity<?> getTelecomById(@PathVariable("id") long id,
                                             @PathVariable("userId") long userId,
                                             HttpServletRequest request){
@@ -2545,7 +2545,34 @@ public class AgentController {
 
         List<TelecomRequest> records;
         try {
-            CompletableFuture<List<TelecomRequest>> operatorRecords = telecoms.getAllTelecoms();
+            CompletableFuture<List<TelecomRequest>> telecomsRecords = telecoms.getAllTelecoms();
+            records = telecomsRecords.get();
+
+            //...check for null records
+            if(records == null || records.isEmpty()){
+                logger.info("No records found in database");
+                records = new ArrayList<>();
+            }
+        } catch (InterruptedException e) {
+            logger.info("Thread Exception:: Action cancelled by user");
+            return exceptionHandler.threadCanceledHandler(
+                    new CanceledException(e.getMessage()),request);
+        } catch (ExecutionException e) {
+            String msg = e.getMessage();
+            logger.error(String.format("General Error:: %s", msg));
+            return exceptionHandler.errorHandler(new GeneralException(msg),request);
+        }
+
+        return new ResponseEntity<>(records, HttpStatus.OK);
+    }
+    @GetMapping("/getActiveTelecoms/{userId}")
+    public ResponseEntity<?>getActiveTelecoms(@PathVariable("userId") long userId,
+                                           HttpServletRequest request){
+        logger.info(String.format("Retrieve all telecoms by user with id %s",userId));
+
+        List<TelecomRequest> records;
+        try {
+            CompletableFuture<List<TelecomRequest>> operatorRecords = telecoms.getActiveTelecoms();
             records = operatorRecords.get();
 
             //...check for null records
@@ -2660,7 +2687,6 @@ public class AgentController {
 
         return new ResponseEntity<>(record, HttpStatus.OK);
     }
-
     @PostMapping("/softDeleteTelecom/{recordId}/{isDeleted}/{userId}")
     public ResponseEntity<?> softDeleteTelecom(@PathVariable Long recordId,
                                                @PathVariable Boolean isDeleted,
@@ -2707,6 +2733,263 @@ public class AgentController {
 
             telecoms.delete(recordId);
             return new ResponseEntity<>("Telecom record deleted successfully", HttpStatus.OK);
+        } catch (Exception e) {
+            String msg = e.getMessage();
+            logger.error(String.format("General Error:: %s", msg));
+            return exceptionHandler.errorHandler(new GeneralException(msg),request);
+        }
+    }
+
+    //endregion
+
+    //region districts
+    @GetMapping("/getDistrictById/{id}/{userId}")
+    public ResponseEntity<?> getDistrictById(@PathVariable("id") long id,
+                                            @PathVariable("userId") long userId,
+                                            HttpServletRequest request){
+
+        logger.info(String.format("Retrieve District with ID '%s' by user with id %s" ,id, userId));
+        DistrictRequest record;
+        try {
+            CompletableFuture<DistrictRequest> futureRecord = districts.findDistrictById(id);
+            record = futureRecord.join();
+            if(record == null){
+                logger.info(String.format("District with id %s not found. Returned a 404 code - Resource not found", id));
+                return exceptionHandler.resourceNotFoundExceptionHandler(
+                        new NotFoundException("District","ID",id),
+                        request);
+            }
+
+            record = futureRecord.get();
+        } catch (InterruptedException e) {
+            return exceptionHandler.threadCanceledHandler(
+                    new CanceledException(e.getMessage()),request);
+        } catch (ExecutionException e) {
+            return exceptionHandler.errorHandler(
+                    new GeneralException(e.getMessage()),request);
+        }
+
+        if(record == null){
+            return exceptionHandler.resourceNotFoundExceptionHandler(
+                    new NotFoundException("District", "Id", String.format("%s", id)),
+                    request);
+        }
+
+        return new ResponseEntity<>(record, HttpStatus.OK);
+    }
+
+    @GetMapping("/getDistrictByName/{name}/{userId}")
+    public ResponseEntity<?> getDistrictByName(@PathVariable("name") String name,
+                                               @PathVariable("userId") long userId,
+                                               HttpServletRequest request){
+        logger.info(String.format("Retrieve District with name '%s' by user with id %s" ,name, userId));
+        DistrictRequest record;
+        try {
+            CompletableFuture<DistrictRequest> futureRecord = districts.findDistrictByName(name);
+            record = futureRecord.join();
+            if(record == null){
+                logger.info(String.format("District with name '%s' not found. Returned a 404 code - Resource not found", name));
+                return exceptionHandler.resourceNotFoundExceptionHandler(
+                        new NotFoundException("District","Name",name),
+                        request);
+            }
+        } catch (Exception e) {
+            return exceptionHandler.errorHandler(
+                    new GeneralException(e.getMessage()),request);
+        }
+
+        return new ResponseEntity<>(record, HttpStatus.OK);
+    }
+    @GetMapping("/getAllDistricts/{userId}")
+    public ResponseEntity<?>getAllDistricts(@PathVariable("userId") long userId,
+                                           HttpServletRequest request){
+        logger.info(String.format("Retrieve all Districts by user with id %s",userId));
+
+        List<DistrictRequest> records;
+        try {
+            CompletableFuture<List<DistrictRequest>> districtRecords = districts.getAllDistricts();
+            records = districtRecords.get();
+
+            //...check for null records
+            if(records == null || records.isEmpty()){
+                logger.info("No records found in database");
+                records = new ArrayList<>();
+            }
+        } catch (InterruptedException e) {
+            logger.info("Thread Exception:: Action cancelled by user");
+            return exceptionHandler.threadCanceledHandler(
+                    new CanceledException(e.getMessage()),request);
+        } catch (ExecutionException e) {
+            String msg = e.getMessage();
+            logger.error(String.format("General Error:: %s", msg));
+            return exceptionHandler.errorHandler(new GeneralException(msg),request);
+        }
+
+        return new ResponseEntity<>(records, HttpStatus.OK);
+    }
+    @GetMapping("/getDistrictTelecoms/{userId}")
+    public ResponseEntity<?>getDistrictTelecoms(@PathVariable("userId") long userId,
+                                              HttpServletRequest request){
+        logger.info(String.format("Retrieve all telecoms by user with id %s",userId));
+
+        List<TelecomRequest> records;
+        try {
+            CompletableFuture<List<TelecomRequest>> operatorRecords = telecoms.getActiveTelecoms();
+            records = operatorRecords.get();
+
+            //...check for null records
+            if(records == null || records.isEmpty()){
+                logger.info("No records found in database");
+                records = new ArrayList<>();
+            }
+        } catch (InterruptedException e) {
+            logger.info("Thread Exception:: Action cancelled by user");
+            return exceptionHandler.threadCanceledHandler(
+                    new CanceledException(e.getMessage()),request);
+        } catch (ExecutionException e) {
+            String msg = e.getMessage();
+            logger.error(String.format("General Error:: %s", msg));
+            return exceptionHandler.errorHandler(new GeneralException(msg),request);
+        }
+
+        return new ResponseEntity<>(records, HttpStatus.OK);
+    }
+    @PutMapping("/createDistrict/{userId}")
+    public ResponseEntity<?> createDistrict(@RequestBody @Valid DistrictRequest district,
+                                           @PathVariable("userId") long userId,
+                                           BindingResult bindingResult,
+                                           HttpServletRequest request){
+        logger.info(String.format("Create new district by user with id %s", userId));
+
+        // Validate request object
+        if (bindingResult.hasErrors()) {
+            return exceptionHandler.validationExceptionHandler(
+                    new ValidationException(Generators.buildErrorMessage(bindingResult)),
+                    request);
+        }
+
+        DistrictRequest record;
+        try {
+            //check whether district name is not in use
+            String name = district.getDistrictName();
+            logger.info(String.format("Checking whether district assigned name '%s' is not in use.", name));
+            CompletableFuture<Boolean> recordExists = this.districts.existsByName(name);
+            boolean exists = recordExists.join();
+            if(exists){
+                logger.info(String.format("Resource Conflict! Another district with name '%s' exists", name));
+                return exceptionHandler.duplicatesResourceExceptionHandler(
+                        new DuplicateException("District", "Name", name),
+                        request);
+            }
+
+            //..return create record
+            CompletableFuture<DistrictRequest> districtRecord = this.districts.create(district);
+            record = districtRecord.join();
+        } catch (Exception e) {
+            return exceptionHandler.errorHandler(
+                    new GeneralException(e.getMessage()),request);
+        }
+
+        if (record == null || record.getId() == 0) {
+            return exceptionHandler.errorHandler(
+                    new GeneralException("An error occurred while saving district"),request);
+        }
+
+        return new ResponseEntity<>(record, HttpStatus.OK);
+    }
+    @PutMapping("/UpdateDistrict/{userId}")
+    public ResponseEntity<?> UpdateDistrict(@RequestBody @Valid DistrictRequest district,
+                                           @PathVariable("userId") long userId,
+                                           BindingResult bindingResult,
+                                           HttpServletRequest request){
+        logger.info(String.format("Modification of district by user with id %s", userId));
+
+        // Validate request object
+        if (bindingResult.hasErrors()) {
+            return exceptionHandler.validationExceptionHandler(
+                    new ValidationException(Generators.buildErrorMessage(bindingResult)),
+                    request);
+        }
+
+        DistrictRequest record;
+        try {
+
+            //check for district record
+            long recordId = district.getId();
+            CompletableFuture<Boolean> found = districts.districtExists(recordId);
+            boolean exists = found.join();
+            if(!exists){
+                logger.info(String.format("District with ID '%s' not found. Returned a 404 code - Resource not found", recordId));
+                return exceptionHandler.resourceNotFoundExceptionHandler(
+                        new NotFoundException("District","ID", recordId),
+                        request);
+            }
+
+            //check whether district name is not in use
+            String name = district.getDistrictName();
+            logger.info(String.format("Checking whether Telecom assigned name '%s' is not in use.", name));
+            CompletableFuture<Boolean> recordExists = this.telecoms.existsByNameAndNotId(name, recordId);
+            exists = recordExists.join();
+            if(exists){
+                logger.info(String.format("Resource Conflict! Another District with name '%s' exists", name));
+                return exceptionHandler.duplicatesResourceExceptionHandler(
+                        new DuplicateException("District", "Name", name),
+                        request);
+            }
+
+            //..update record
+            this.districts.update(district);
+            record = district;
+        } catch (Exception e) {
+            return exceptionHandler.errorHandler(
+                    new GeneralException(e.getMessage()),request);
+        }
+
+        return new ResponseEntity<>(record, HttpStatus.OK);
+    }
+    @PostMapping("/softDeleteDistrict/{recordId}/{isDeleted}/{userId}")
+    public ResponseEntity<?> softDeleteDistrict(@PathVariable Long recordId,
+                                               @PathVariable Boolean isDeleted,
+                                               @PathVariable("userId") long userId,
+                                               HttpServletRequest request){
+        logger.info(String.format("Mark District '%s' as deleted by user with id %s" ,recordId, userId));
+
+        try {
+            CompletableFuture<DistrictRequest> futureRecord = districts.findDistrictById(recordId);
+            DistrictRequest record = futureRecord.join();
+            if(record == null){
+                logger.info(String.format("District with id %s retrieval by user with id %s failed. Returned a 404 code - Resource not found",recordId, userId));
+                return exceptionHandler.resourceNotFoundExceptionHandler(
+                        new NotFoundException("District","ID",recordId),
+                        request);
+            }
+
+            districts.softDelete(recordId, isDeleted);
+            return new ResponseEntity<>("District record updated successfully", HttpStatus.OK);
+        } catch (Exception e) {
+            String msg = e.getMessage();
+            logger.error(String.format("General Error:: %s", msg));
+            return exceptionHandler.errorHandler(new GeneralException(msg),request);
+        }
+
+    }
+    @PutMapping("/deleteDistrict/{recordId}/{userId}")
+    public ResponseEntity<?> deleteDistrict(@PathVariable Long recordId,
+                                           @PathVariable("userId") long userId,
+                                           HttpServletRequest request){
+        logger.info(String.format("Delete District with ID '%s' by user with id %s",recordId, userId));
+        try {
+            CompletableFuture<DistrictRequest> district = this.districts.findDistrictById(recordId);
+            DistrictRequest record = district.join();
+            if(record == null){
+                logger.info(String.format("District with id %s retrieval by user with id %s failed. Returned a 404 code - Resource not found",recordId ,userId));
+                return exceptionHandler.resourceNotFoundExceptionHandler(
+                        new NotFoundException("District","ID", recordId),
+                        request);
+            }
+
+            telecoms.delete(recordId);
+            return new ResponseEntity<>("District record deleted successfully", HttpStatus.OK);
         } catch (Exception e) {
             String msg = e.getMessage();
             logger.error(String.format("General Error:: %s", msg));

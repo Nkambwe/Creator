@@ -66,6 +66,9 @@ public class BusinessAgent extends Agent {
     @ManyToOne
     private Affiliation affiliation;
 
+    @ManyToOne
+    private Bank bank;
+
     @OneToMany(mappedBy = "business", fetch = FetchType.EAGER)
     private List<Approval> approvals;
 

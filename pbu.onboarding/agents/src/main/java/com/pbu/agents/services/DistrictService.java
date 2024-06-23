@@ -7,6 +7,7 @@ import java.util.concurrent.CompletableFuture;
 
 public interface DistrictService {
     CompletableFuture<Boolean> districtExists(long id);
+    CompletableFuture<Boolean> existsByName(String name);
     CompletableFuture<Boolean>  existsByNameAndNotId(String name, Long id);
     CompletableFuture<DistrictRequest> findDistrictById(long id);
     CompletableFuture<DistrictRequest>  findDistrictByName(String name);

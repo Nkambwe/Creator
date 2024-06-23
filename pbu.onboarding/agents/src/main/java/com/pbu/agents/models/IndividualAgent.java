@@ -46,7 +46,6 @@ public class IndividualAgent extends Agent {
     @Column(nullable=false)
     private String email;
 
-
     @OneToMany(mappedBy = "person", fetch = FetchType.EAGER)
     private List<Approval> approvals;
 
