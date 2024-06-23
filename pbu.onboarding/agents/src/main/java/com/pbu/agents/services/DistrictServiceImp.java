@@ -1,10 +1,12 @@
 package com.pbu.agents.services;
 
 import com.pbu.agents.requests.DistrictRequest;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+@Service
 public class DistrictServiceImp implements DistrictService {
     @Override
     public CompletableFuture<Boolean> districtExists(long id) {

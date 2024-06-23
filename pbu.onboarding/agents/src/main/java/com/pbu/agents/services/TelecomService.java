@@ -6,6 +6,7 @@ import java.util.concurrent.CompletableFuture;
 
 public interface TelecomService {
     CompletableFuture<Boolean> telecomExists(long id);
+    CompletableFuture<Boolean> existsByName(String name);
     CompletableFuture<Boolean>  existsByNameAndNotId(String name, Long id);
     CompletableFuture<TelecomRequest> findTelecomById(long id);
     CompletableFuture<TelecomRequest>  findTelecomByName(String name);

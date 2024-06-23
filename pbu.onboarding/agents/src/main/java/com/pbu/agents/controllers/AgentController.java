@@ -37,6 +37,9 @@ public class AgentController {
     private final OperatorService operators;
     private final SignatoryService signatories;
     private final SettingService settings;
+    private final BankService banks;
+    private final TelecomService telecoms;
+    private final DistrictService districts;
 
     public AgentController(
             ModelMapper mapper,
@@ -48,7 +51,11 @@ public class AgentController {
             KinService kins,
             PartnerService partners,
             OperatorService operators,
-            SignatoryService signatories, SettingService settings) {
+            SignatoryService signatories,
+            SettingService settings,
+            BankService banks,
+            TelecomService telecoms,
+            DistrictService districts) {
         this.logger = logger;
         this.mapper = mapper;
         this.exceptionHandler = exceptionHandler;
@@ -60,6 +67,9 @@ public class AgentController {
         this.operators = operators;
         this.signatories = signatories;
         this.settings = settings;
+        this.banks = banks;
+        this.telecoms = telecoms;
+        this.districts = districts;
     }
 
     //region all agents
@@ -2044,7 +2054,7 @@ public class AgentController {
             if(exists){
                 logger.info(String.format("Resource Conflict! Another organization with name '%s' exists", orgName));
                 return exceptionHandler.duplicatesResourceExceptionHandler(
-                        new DuplicateException("Branch", "Name", orgName),
+                        new DuplicateException("organization", "Name", orgName),
                         request);
             }
 
@@ -2053,9 +2063,9 @@ public class AgentController {
             String sortCode = affiliation.getSortCode();
             exists = this.affiliations.checkAffiliationDuplicateSortCode(sortCode);
             if(exists){
-                logger.info(String.format("Resource Conflict! Another branch with SolId '%s' exists", sortCode));
+                logger.info(String.format("Resource Conflict! Another organization with SolId '%s' exists", sortCode));
                 return exceptionHandler.duplicatesResourceExceptionHandler(
-                        new DuplicateException("Branch", "SortCode", sortCode),
+                        new DuplicateException("organization", "SortCode", sortCode),
                         request);
             }
 
@@ -2117,7 +2127,7 @@ public class AgentController {
             }
 
             //check whether organization SortCode is not in use
-            logger.info("Checking whether branch assigned SOLID is not in use...");
+            logger.info("Checking whether organization assigned SortCode is not in use...");
             String sortCode = affiliation.getSortCode();
             exists = this.affiliations.checkAffiliationDuplicateSortCodeWithDifferentIds(sortCode, affiliation.getId());
             if(exists){
@@ -2189,6 +2199,514 @@ public class AgentController {
 
             affiliations.deleteAffiliation(id);
             return new ResponseEntity<>("Organization record deleted successfully", HttpStatus.OK);
+        } catch (Exception e) {
+            String msg = e.getMessage();
+            logger.error(String.format("General Error:: %s", msg));
+            return exceptionHandler.errorHandler(new GeneralException(msg),request);
+        }
+    }
+
+    //endregion
+
+    //region banks
+    @GetMapping("/getBankById/{id}/{userId}")
+    public ResponseEntity<?> getBankById(@PathVariable("id") long id,
+                                                @PathVariable("userId") long userId,
+                                                HttpServletRequest request){
+
+        logger.info(String.format("Retrieve Bank ID '%s' by user with id %s" ,id, userId));
+        BankRequest record;
+        try {
+            CompletableFuture<BankRequest> futureRecord = banks.findBankById(id);
+            record = futureRecord.join();
+            if(record == null){
+                logger.info(String.format("Bank with id %s not found. Returned a 404 code - Resource not found", id));
+                return exceptionHandler.resourceNotFoundExceptionHandler(
+                        new NotFoundException("Bank","ID",id),
+                        request);
+            }
+
+            record = futureRecord.get();
+        } catch (InterruptedException e) {
+            return exceptionHandler.threadCanceledHandler(
+                    new CanceledException(e.getMessage()),request);
+        } catch (ExecutionException e) {
+            return exceptionHandler.errorHandler(
+                    new GeneralException(e.getMessage()),request);
+        }
+
+        if(record == null){
+            return exceptionHandler.resourceNotFoundExceptionHandler(
+                    new NotFoundException("Bank", "Id", String.format("%s", id)),
+                    request);
+        }
+
+        return new ResponseEntity<>(record, HttpStatus.OK);
+    }
+    @GetMapping("/ getBankBySortCode/{sortCode}")
+    public ResponseEntity<?> getBankBySortCode(@PathVariable("sortCode") String sortCode, HttpServletRequest request){
+
+        BankRequest record;
+        try {
+            CompletableFuture<BankRequest> futureRecord = banks.findBankBySortCode(sortCode);
+            record = futureRecord.join();
+            if(record == null){
+                logger.info(String.format("Bank with sort code %s not found. Returned a 404 code - Resource not found", sortCode));
+                return exceptionHandler.resourceNotFoundExceptionHandler(
+                        new NotFoundException("Bank","sortCode",sortCode),
+                        request);
+            }
+        } catch (Exception e) {
+            return exceptionHandler.errorHandler(
+                    new GeneralException(e.getMessage()),request);
+        }
+
+        return new ResponseEntity<>(record, HttpStatus.OK);
+    }
+
+    @GetMapping("/getBanks")
+    public ResponseEntity<?>  getBanks(HttpServletRequest request) {
+        List<BankRequest> records;
+        try {
+            CompletableFuture<List<BankRequest>> futureRecord = banks.getBanks();
+            records = futureRecord.get();
+        } catch (InterruptedException e) {
+            return exceptionHandler.threadCanceledHandler(
+                    new CanceledException(e.getMessage()),request);
+        } catch (ExecutionException e) {
+            return exceptionHandler.errorHandler(
+                    new GeneralException(e.getMessage()),request);
+        }
+
+        if(records == null || records.isEmpty()){
+            records = new ArrayList<>();
+        }
+
+        return new ResponseEntity<>(records, HttpStatus.OK);
+    }
+
+    @GetMapping("/getActiveBanks")
+    public ResponseEntity<?> getActiveBanks(HttpServletRequest request) {
+        List<BankRequest> records;
+        try {
+            CompletableFuture<List<BankRequest>> futureRecord = banks.getActiveBanks();
+            records = futureRecord.get();
+        } catch (InterruptedException e) {
+            return exceptionHandler.threadCanceledHandler(
+                    new CanceledException(e.getMessage()),request);
+        } catch (ExecutionException e) {
+            return exceptionHandler.errorHandler(
+                    new GeneralException(e.getMessage()),request);
+        }
+
+        if(records == null || records.isEmpty()){
+            records = new ArrayList<>();
+        }
+
+        return new ResponseEntity<>(records, HttpStatus.OK);
+    }
+
+    @PostMapping("/createBank")
+    public ResponseEntity<?> createBank(@RequestBody @Valid BankRequest bank,
+                                               BindingResult bindingResult,
+                                               HttpServletRequest request) {
+        // Validate request object
+        if (bindingResult.hasErrors()) {
+            return exceptionHandler.validationExceptionHandler(
+                    new ValidationException(Generators.buildErrorMessage(bindingResult)),
+                    request);
+        }
+
+        BankRequest record;
+        try {
+            //check whether branch name is not in use
+            logger.info("Checking whether bank assigned name is not in use...");
+            String bankName = bank.getBankName();
+            boolean exists = this.banks.checkBankDuplicateName(bankName);
+            if(exists){
+                logger.info(String.format("Resource Conflict! Another bank with name '%s' exists", bankName));
+                return exceptionHandler.duplicatesResourceExceptionHandler(
+                        new DuplicateException("Bank", "Name", bankName),
+                        request);
+            }
+
+            //check whether bank sort code is not in use
+            logger.info("Checking whether bank assigned sort code is not in use...");
+            String sortCode = bank.getSortCode();
+            exists = this.banks.checkBankDuplicateSortCode(sortCode);
+            if(exists){
+                logger.info(String.format("Resource Conflict! Another bank with SolId '%s' exists", sortCode));
+                return exceptionHandler.duplicatesResourceExceptionHandler(
+                        new DuplicateException("Bank", "SortCode", sortCode),
+                        request);
+            }
+
+            CompletableFuture<BankRequest> futureRecord = banks.createBank(bank);
+            record = futureRecord.get();
+        } catch (InterruptedException e) {
+            return exceptionHandler.threadCanceledHandler(
+                    new CanceledException(e.getMessage()),request);
+        } catch (ExecutionException e) {
+            return exceptionHandler.errorHandler(
+                    new GeneralException(e.getMessage()),request);
+        }
+
+        if (record == null || record.getId() == 0) {
+            return exceptionHandler.errorHandler(
+                    new GeneralException("An error occurred while saving bank"),request);
+        }
+
+        return new ResponseEntity<>(record, HttpStatus.OK);
+    }
+
+    @PutMapping("/updateBank/{userId}")
+    public ResponseEntity<?> updateBank(@RequestBody @Valid BankRequest bank,
+                                               @PathVariable("userId") long userId,
+                                               BindingResult bindingResult,
+                                               HttpServletRequest request){
+
+        long recordId =  bank.getId();
+        logger.info(String.format("Modify Bank with ID '%s' by user with id %s", recordId, userId));
+
+        // Validate request object
+        if (bindingResult.hasErrors()) {
+            return exceptionHandler.validationExceptionHandler(
+                    new ValidationException(Generators.buildErrorMessage(bindingResult)),
+                    request);
+        }
+
+        BankRequest record;
+        try {
+
+            CompletableFuture<BankRequest> bankRecord = this.banks.findBankById(bank.getId());
+            record = bankRecord.join();
+            if(record == null){
+                logger.info(String.format("Bank with id %s not found. Returned a 404 code - Resource not found", bank.getId()));
+                return exceptionHandler.resourceNotFoundExceptionHandler(
+                        new NotFoundException("Bank","ID",bank.getId()),
+                        request);
+            }
+
+            //check whether bank name is not in use
+            logger.info(String.format("Checking whether bank assigned name '%s' is not in use.", bank.getBankName()));
+            String bankName = bank.getBankName();
+            boolean exists = this.banks.checkBankDuplicateNameWithDifferentIds(bankName, bank.getId());
+            if(exists){
+                logger.info(String.format("Resource Conflict! Another bank with name '%s' exists", bankName));
+                return exceptionHandler.duplicatesResourceExceptionHandler(
+                        new DuplicateException("Bank", "Name", bankName),
+                        request);
+            }
+
+            //check whether bank SortCode is not in use
+            logger.info("Checking whether bank assigned Sort Code is not in use...");
+            String sortCode = bank.getSortCode();
+            exists = this.banks.checkBankDuplicateSortCodeWithDifferentIds(sortCode, bank.getId());
+            if(exists){
+                logger.info(String.format("Resource Conflict! Another bank with sortCode '%s' exists", sortCode));
+                return exceptionHandler.duplicatesResourceExceptionHandler(
+                        new DuplicateException("Bank", "SortCode", sortCode),
+                        request);
+            }
+
+            banks.updateBank(bank);
+
+            //..return updated record
+            bankRecord = this.banks.findBankById(bank.getId());
+            record = bankRecord.join();
+        } catch (Exception e) {
+            return exceptionHandler.errorHandler(
+                    new GeneralException(e.getMessage()),request);
+        }
+
+        if (record == null || record.getId() == 0) {
+            return exceptionHandler.errorHandler(
+                    new GeneralException("An error occurred while saving bank"),request);
+        }
+
+        return new ResponseEntity<>(record, HttpStatus.OK);
+    }
+
+    @DeleteMapping("/softDeleteBank/{id}/{isDeleted}")
+    public ResponseEntity<?> softDeleteBank(@PathVariable Long id,
+                                                   @PathVariable boolean isDeleted,
+                                                   HttpServletRequest request) {
+        logger.info(String.format("Mark bank '%s' as deleted" ,id));
+
+        try {
+
+            CompletableFuture<BankRequest> bankRecord = this.banks.findBankById(id);
+            BankRequest record = bankRecord.join();
+            if(record == null){
+                logger.info(String.format("Bank with id %s not found. Returned a 404 code - Resource not found", id));
+                return exceptionHandler.resourceNotFoundExceptionHandler(
+                        new NotFoundException("Bank","ID",id),
+                        request);
+            }
+
+            banks.softDeleteBank(id, isDeleted);
+            return new ResponseEntity<>("Bank record updated successfully", HttpStatus.OK);
+        } catch (Exception e) {
+            String msg = e.getMessage();
+            logger.error(String.format("General Error:: %s", msg));
+            return exceptionHandler.errorHandler(new GeneralException(msg),request);
+        }
+    }
+
+    @DeleteMapping("/deleteBank/{id}")
+    public ResponseEntity<?> deleteBank(@PathVariable Long id,
+                                        HttpServletRequest request) {
+        logger.info(String.format("Delete bank with ID '%s'" ,id));
+
+        try {
+
+            CompletableFuture<BankRequest> bankRecord = this.banks.findBankById(id);
+            BankRequest record = bankRecord.join();
+            if(record == null){
+                logger.info(String.format("Bank with id %s not found. Returned a 404 code - Resource not found", id));
+                return exceptionHandler.resourceNotFoundExceptionHandler(
+                        new NotFoundException("Bank","ID",id),
+                        request);
+            }
+
+            affiliations.deleteAffiliation(id);
+            return new ResponseEntity<>("Bank record deleted successfully", HttpStatus.OK);
+        } catch (Exception e) {
+            String msg = e.getMessage();
+            logger.error(String.format("General Error:: %s", msg));
+            return exceptionHandler.errorHandler(new GeneralException(msg),request);
+        }
+    }
+
+    //endregion
+
+    //region Telecoms
+    @GetMapping("getTelecomById/{id}/{userId}")
+    public ResponseEntity<?> getTelecomById(@PathVariable("id") long id,
+                                            @PathVariable("userId") long userId,
+                                            HttpServletRequest request){
+
+        logger.info(String.format("Retrieve Telecom with ID '%s' by user with id %s" ,id, userId));
+        TelecomRequest record;
+        try {
+            CompletableFuture<TelecomRequest> futureRecord = telecoms.findTelecomById(id);
+            record = futureRecord.join();
+            if(record == null){
+                logger.info(String.format("Telecom with id %s not found. Returned a 404 code - Resource not found", id));
+                return exceptionHandler.resourceNotFoundExceptionHandler(
+                        new NotFoundException("Telecom","ID",id),
+                        request);
+            }
+
+            record = futureRecord.get();
+        } catch (InterruptedException e) {
+            return exceptionHandler.threadCanceledHandler(
+                    new CanceledException(e.getMessage()),request);
+        } catch (ExecutionException e) {
+            return exceptionHandler.errorHandler(
+                    new GeneralException(e.getMessage()),request);
+        }
+
+        if(record == null){
+            return exceptionHandler.resourceNotFoundExceptionHandler(
+                    new NotFoundException("Telecom", "Id", String.format("%s", id)),
+                    request);
+        }
+
+        return new ResponseEntity<>(record, HttpStatus.OK);
+    }
+
+    @GetMapping("/ getTelecomByName/{name}/{userId}")
+    public ResponseEntity<?> getTelecomByName(@PathVariable("name") String name,
+                                              @PathVariable("userId") long userId,
+                                              HttpServletRequest request){
+        logger.info(String.format("Retrieve telecom with name '%s' by user with id %s" ,name, userId));
+        TelecomRequest record;
+        try {
+            CompletableFuture<TelecomRequest> futureRecord = telecoms.findTelecomByName(name);
+            record = futureRecord.join();
+            if(record == null){
+                logger.info(String.format("Telecom with name '%s' not found. Returned a 404 code - Resource not found", name));
+                return exceptionHandler.resourceNotFoundExceptionHandler(
+                        new NotFoundException("Telecom","Name",name),
+                        request);
+            }
+        } catch (Exception e) {
+            return exceptionHandler.errorHandler(
+                    new GeneralException(e.getMessage()),request);
+        }
+
+        return new ResponseEntity<>(record, HttpStatus.OK);
+    }
+    @GetMapping("/getAllTelecoms/{userId}")
+    public ResponseEntity<?>getAllTelecoms(@PathVariable("userId") long userId,
+                                         HttpServletRequest request){
+        logger.info(String.format("Retrieve all telecoms by user with id %s",userId));
+
+        List<TelecomRequest> records;
+        try {
+            CompletableFuture<List<TelecomRequest>> operatorRecords = telecoms.getAllTelecoms();
+            records = operatorRecords.get();
+
+            //...check for null records
+            if(records == null || records.isEmpty()){
+                logger.info("No records found in database");
+                records = new ArrayList<>();
+            }
+        } catch (InterruptedException e) {
+            logger.info("Thread Exception:: Action cancelled by user");
+            return exceptionHandler.threadCanceledHandler(
+                    new CanceledException(e.getMessage()),request);
+        } catch (ExecutionException e) {
+            String msg = e.getMessage();
+            logger.error(String.format("General Error:: %s", msg));
+            return exceptionHandler.errorHandler(new GeneralException(msg),request);
+        }
+
+        return new ResponseEntity<>(records, HttpStatus.OK);
+    }
+
+    @PutMapping("/createTelecom/{userId}")
+    public ResponseEntity<?> createTelecom(@RequestBody @Valid TelecomRequest telecom,
+                                           @PathVariable("userId") long userId,
+                                           BindingResult bindingResult,
+                                           HttpServletRequest request){
+        logger.info(String.format("Create new telecom by user with id %s", userId));
+
+        // Validate request object
+        if (bindingResult.hasErrors()) {
+            return exceptionHandler.validationExceptionHandler(
+                    new ValidationException(Generators.buildErrorMessage(bindingResult)),
+                    request);
+        }
+
+        TelecomRequest record;
+        try {
+            //check whether telecom name is not in use
+            String name = telecom.getTelecomName();
+            logger.info(String.format("Checking whether telecom assigned name '%s' is not in use.", name));
+            CompletableFuture<Boolean> recordExists = this.telecoms.existsByName(name);
+            boolean exists = recordExists.join();
+            if(exists){
+                logger.info(String.format("Resource Conflict! Another telecom with name '%s' exists", name));
+                return exceptionHandler.duplicatesResourceExceptionHandler(
+                        new DuplicateException("Telecom", "Name", name),
+                        request);
+            }
+
+            //..return create record
+            CompletableFuture<TelecomRequest> telecomRecord = this.telecoms.create(telecom);
+            record = telecomRecord.join();
+        } catch (Exception e) {
+            return exceptionHandler.errorHandler(
+                    new GeneralException(e.getMessage()),request);
+        }
+
+        if (record == null || record.getId() == 0) {
+            return exceptionHandler.errorHandler(
+                    new GeneralException("An error occurred while saving Telecom"),request);
+        }
+
+        return new ResponseEntity<>(record, HttpStatus.OK);
+    }
+
+    @PutMapping("/UpdateTelecom/{userId}")
+    public ResponseEntity<?> UpdateTelecom(@RequestBody @Valid TelecomRequest telecom,
+                                           @PathVariable("userId") long userId,
+                                           BindingResult bindingResult,
+                                           HttpServletRequest request){
+        logger.info(String.format("Modification of Telecom by user with id %s", userId));
+
+        // Validate request object
+        if (bindingResult.hasErrors()) {
+            return exceptionHandler.validationExceptionHandler(
+                    new ValidationException(Generators.buildErrorMessage(bindingResult)),
+                    request);
+        }
+
+        TelecomRequest record;
+        try {
+
+            //check for Telecom record
+            long recordId = telecom.getId();
+            CompletableFuture<Boolean> found = telecoms.telecomExists(recordId);
+            boolean exists = found.join();
+            if(!exists){
+                logger.info(String.format("Telecom with ID '%s' not found. Returned a 404 code - Resource not found", recordId));
+                return exceptionHandler.resourceNotFoundExceptionHandler(
+                        new NotFoundException("Telecom","ID", recordId),
+                        request);
+            }
+
+            //check whether telecom name is not in use
+            String name = telecom.getTelecomName();
+            logger.info(String.format("Checking whether Telecom assigned name '%s' is not in use.", name));
+            CompletableFuture<Boolean> recordExists = this.telecoms.existsByNameAndNotId(name, recordId);
+            exists = recordExists.join();
+            if(exists){
+                logger.info(String.format("Resource Conflict! Another Telecom with name '%s' exists", name));
+                return exceptionHandler.duplicatesResourceExceptionHandler(
+                        new DuplicateException("Telecom", "Name", name),
+                        request);
+            }
+
+            //..update record
+            this.telecoms.update(telecom);
+            record = telecom;
+        } catch (Exception e) {
+            return exceptionHandler.errorHandler(
+                    new GeneralException(e.getMessage()),request);
+        }
+
+        return new ResponseEntity<>(record, HttpStatus.OK);
+    }
+
+    @PostMapping("/softDeleteTelecom/{recordId}/{isDeleted}/{userId}")
+    public ResponseEntity<?> softDeleteTelecom(@PathVariable Long recordId,
+                                               @PathVariable Boolean isDeleted,
+                                               @PathVariable("userId") long userId,
+                                               HttpServletRequest request){
+        logger.info(String.format("Mark Telecom '%s' as deleted by user with id %s" ,recordId, userId));
+
+        try {
+
+            CompletableFuture<TelecomRequest> futureRecord = telecoms.findTelecomById(recordId);
+            TelecomRequest record = futureRecord.join();
+            if(record == null){
+                logger.info(String.format("Telecom with id %s retrieval by user with id %s failed. Returned a 404 code - Resource not found",recordId, userId));
+                return exceptionHandler.resourceNotFoundExceptionHandler(
+                        new NotFoundException("Telecom","ID",recordId),
+                        request);
+            }
+
+            telecoms.softDelete(recordId, isDeleted);
+            return new ResponseEntity<>("Telecom record updated successfully", HttpStatus.OK);
+        } catch (Exception e) {
+            String msg = e.getMessage();
+            logger.error(String.format("General Error:: %s", msg));
+            return exceptionHandler.errorHandler(new GeneralException(msg),request);
+        }
+
+    }
+
+    @PutMapping("/deleteTelecom/{recordId}/{userId}")
+    public ResponseEntity<?> deleteTelecom(@PathVariable Long recordId,
+                                           @PathVariable("userId") long userId,
+                                           HttpServletRequest request){
+        logger.info(String.format("Delete Telecom with ID '%s' by user with id %s",recordId, userId));
+
+        try {
+            CompletableFuture<TelecomRequest> telecom = this.telecoms.findTelecomById(recordId);
+            TelecomRequest record = telecom.join();
+            if(record == null){
+                logger.info(String.format("Telecom with id %s retrieval by user with id %s failed. Returned a 404 code - Resource not found",recordId ,userId));
+                return exceptionHandler.resourceNotFoundExceptionHandler(
+                        new NotFoundException("Telecom","KinId", recordId),
+                        request);
+            }
+
+            telecoms.delete(recordId);
+            return new ResponseEntity<>("Telecom record deleted successfully", HttpStatus.OK);
         } catch (Exception e) {
             String msg = e.getMessage();
             logger.error(String.format("General Error:: %s", msg));
