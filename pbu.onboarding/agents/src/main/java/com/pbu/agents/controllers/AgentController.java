@@ -278,7 +278,7 @@ public class AgentController {
         return new ResponseEntity<>(records, HttpStatus.OK);
     }
 
-    @GetMapping("/getBusinessAgents/{userId}")
+    @GetMapping("/getDeletedBusinessAgents/{userId}")
     public ResponseEntity<?>getDeletedBusinessAgents(@PathVariable("userId") long userId,
                                               HttpServletRequest request){
         logger.info(String.format("Retrieve business agents by user with id %s",userId));
@@ -595,7 +595,7 @@ public class AgentController {
 
         return new ResponseEntity<>(records, HttpStatus.OK);
     }
-    @GetMapping("/getIndividualAgents/{userId}")
+    @GetMapping("/getDeletedIndividualAgents/{userId}")
     public ResponseEntity<?>getDeletedIndividualAgents(@PathVariable("userId") long userId,
                                                 HttpServletRequest request){
         logger.info(String.format("Retrieve individual agents by user with id %s",userId));
@@ -3104,7 +3104,7 @@ public class AgentController {
         return new ResponseEntity<>(records, HttpStatus.OK);
     }
 
-    @GetMapping("/getLoginSettings")
+    @GetMapping("/getDocumentSettings")
     public ResponseEntity<?>getDocumentSettings(HttpServletRequest request){
         logger.info("Retrieve attachment configurations");
         List<SettingsRequest> records;

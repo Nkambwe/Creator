@@ -5,10 +5,12 @@ import com.pbu.agents.models.Approval;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class ApprovalExtensionRepositoryImp implements ApprovalExtensionRepository {
+@Transactional
+public class ApprovalExtensionRepositoryImpl implements ApprovalExtensionRepository {
 
     @PersistenceContext
     private EntityManager entityManager;

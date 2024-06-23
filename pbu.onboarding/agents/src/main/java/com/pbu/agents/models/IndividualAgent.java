@@ -52,6 +52,12 @@ public class IndividualAgent extends Agent {
     @ManyToOne
     private Affiliation affiliation;
 
+    @ManyToOne
+    private Bank bank;
+
+    @ManyToOne
+    private Telecom telecom;
+
     @OneToMany(mappedBy = "person", fetch = FetchType.EAGER)
     private List<Operator> operators;
 

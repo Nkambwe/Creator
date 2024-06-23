@@ -47,9 +47,9 @@ public class OperatorServiceImp implements OperatorService {
     public  boolean duplicatedName(String name, long agentId, long id) {
         logger.info(String.format("Checking whether operator name '%s' is assigned to another ID operator on the same agent '%s' ",name, agentId));
         try{
-            boolean exists = operators.exitsByOperatorNameAndBusinessIdAndIdNot(name, agentId, id);
+            boolean exists = operators.existsByOperatorNameAndBusinessIdAndIdNot(name, agentId, id);
             if(!exists){
-                exists = operators.exitsByOperatorNameAndPersonIdAndIdNot(name, agentId, id);
+                exists = operators.existsByOperatorNameAndPersonIdAndIdNot(name, agentId, id);
             }
 
             return exists;

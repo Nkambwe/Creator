@@ -11,8 +11,8 @@ import java.util.List;
 
 public interface OperatorRepository extends JpaRepository<Operator, Long> {
     boolean existsById(long id);
-    boolean exitsByOperatorNameAndPersonIdAndIdNot(String name, Long personId, long id);
-    boolean exitsByOperatorNameAndBusinessIdAndIdNot(String name, Long businessId, long id);
+    boolean existsByOperatorNameAndPersonIdAndIdNot(String name, Long personId, long id);
+    boolean existsByOperatorNameAndBusinessIdAndIdNot(String name, Long businessId, long id);
     boolean existsByIdNin(String nin);
     boolean existsByIdNinAndIdNot(String nin, long id);
     boolean existsByOperatorNameAndBusiness_Id(String operatorName, Long businessId);

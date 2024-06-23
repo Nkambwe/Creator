@@ -48,9 +48,6 @@ public class BusinessAgent extends Agent {
     @Column(nullable=false)
     private int outlets;
 
-    @Column(length = 120, nullable=false)
-    private String district;
-
     @Column(length = 220, nullable=false)
     private String villageOrParishOrCounty;
 
@@ -68,6 +65,12 @@ public class BusinessAgent extends Agent {
 
     @ManyToOne
     private Bank bank;
+
+    @ManyToOne
+    private Telecom telecom;
+
+    @ManyToOne
+    private District district;
 
     @OneToMany(mappedBy = "business", fetch = FetchType.EAGER)
     private List<Approval> approvals;
