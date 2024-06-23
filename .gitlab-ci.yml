@@ -1,0 +1,88 @@
+#create a docker image
+image: docker:latest
+services:
+  - docker:dind
+# Include the DAST template
+include:
+  - template: Security/SAST.gitlab-ci.yml
+  #- template: Security/Secret-Detection.gitlab-ci.yml
+
+
+stages:
+  - build
+  - test
+  - deploy-uat
+  - deploy-staging
+  - upload
+
+build job:
+    stage: build
+    tags:
+        - local_shared
+    script:
+        - echo "TCompiling the code..."
+        - echo "Compile complete"
+        - mkdir build/
+        - echo "My application binary file" > build/executable-binary-file-v1
+    artifacts:
+        paths:
+            - build/executable-binary-file-v1
+
+
+unit-test-job:
+    stage: test
+    tags:
+        - local_shared
+    script:
+        - echo "Running unit tests... This will take about 60 seconds"
+        #- sleep 60
+        - echo "Code coverage is 90%"
+        - echo "All tests done"
+        #- cat $CI_PROJECT_DIR/build/executable-binary-file-v1
+        
+lint-test-job:
+    stage: test
+    tags:
+        - local_shared
+    script:
+        - echo "Linting code... This will take about 10 seconds"
+        #- sleep 10
+        - echo "No lint issues found"
+sast:
+  stage: test
+  tags:
+      - local_shared
+  rules:
+      - if: $CI_COMMIT_TAG
+
+  before_script:
+      - echo "hello from before sast"
+      - echo "this is in the file" > test.txt
+  script:
+      - ls
+      - echo "sast code... This will take about 10 seconds"
+      - echo "No sast issues found"
+
+deploy to uat:
+    stage: deploy-uat
+    tags:
+        - local_shared
+    script:
+        - echo "This is the deploy-uat Job"
+        - echo "Successfully deployed to uat"
+
+deploy to staging:
+    stage: deploy-staging
+    tags:
+        - local_shared
+    script:
+        - echo "This is the deploy-staging Job"
+        - echo "Successfully deployed to staging"
+
+Upload to proaduction:
+    stage: upload
+    tags:
+        - local_shared
+    script:
+        - echo "This is ready uploaded fro production Job"
+        - echo "Successfully upload to production"

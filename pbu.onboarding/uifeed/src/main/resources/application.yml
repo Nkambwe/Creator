@@ -1,0 +1,8 @@
+server:
+  port: 5880
+  servlet:
+    context-path: /onboarding
+
+spring:
+  application:
+    name: onboarding
